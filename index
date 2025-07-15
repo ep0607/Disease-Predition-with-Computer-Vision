@@ -1,0 +1,375 @@
+import React, { useState, useRef, useCallback } from 'react';
+import { Camera, Upload, Eye, Thermometer, Activity, Shield, Smartphone, Brain, Zap, Lock, CheckCircle, AlertTriangle, Info } from 'lucide-react';
+
+const HealthVisionApp = () => {
+  const [activeTab, setActiveTab] = useState('scanner');
+  const [isScanning, setIsScanning] = useState(false);
+  const [results, setResults] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [confidence, setConfidence] = useState(0);
+  const fileInputRef = useRef(null);
+
+  // Simulated ML prediction function
+  const simulateAnalysis = useCallback((imageData) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const conditions = [
+          { name: 'Fever Detection', risk: 'Low', confidence: 92, color: 'text-green-600' },
+          { name: 'Eye Health', risk: 'Normal', confidence: 88, color: 'text-green-600' },
+          { name: 'Liver Function Indicators', risk: 'Monitor', confidence: 75, color: 'text-yellow-600' }
+        ];
+        
+        resolve({
+          overallHealth: 'Good',
+          conditions,
+          recommendations: [
+            'Continue regular health monitoring',
+            'Maintain healthy lifestyle habits',
+            'Consider follow-up if symptoms persist'
+          ]
+        });
+      }, 3000);
+    });
+  }, []);
+
+  const handleImageCapture = useCallback(async () => {
+    setIsScanning(true);
+    setConfidence(0);
+    
+    // Simulate confidence building
+    const interval = setInterval(() => {
+      setConfidence(prev => {
+        if (prev >= 90) {
+          clearInterval(interval);
+          return 90;
+        }
+        return prev + Math.random() * 10;
+      });
+    }, 100);
+
+    try {
+      const mockImageData = 'simulated_image_data';
+      const analysisResults = await simulateAnalysis(mockImageData);
+      setResults(analysisResults);
+    } catch (error) {
+      console.error('Analysis failed:', error);
+    } finally {
+      setIsScanning(false);
+      clearInterval(interval);
+    }
+  }, [simulateAnalysis]);
+
+  const handleFileUpload = useCallback((event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setSelectedImage(e.target.result);
+        handleImageCapture();
+      };
+      reader.readAsDataURL(file);
+    }
+  }, [handleImageCapture]);
+
+  const FeatureCard = ({ icon: Icon, title, description, highlight }) => (
+    <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
+      <div className="flex items-start space-x-4">
+        <div className={`p-3 rounded-lg ${highlight ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
+          <Icon size={24} />
+        </div>
+        <div>
+          <h3 className="font-semibold text-gray-800 mb-2">{title}</h3>
+          <p className="text-gray-600 text-sm">{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const ScannerInterface = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="relative mx-auto w-80 h-80 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl border-2 border-dashed border-blue-300 flex items-center justify-center overflow-hidden">
+          {selectedImage ? (
+            <img src={selectedImage} alt="Selected" className="w-full h-full object-cover rounded-2xl" />
+          ) : (
+            <div className="text-center">
+              <Camera size={48} className="mx-auto text-blue-400 mb-4" />
+              <p className="text-gray-600">Position your face within the frame</p>
+            </div>
+          )}
+          
+          {isScanning && (
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-2xl">
+              <div className="text-center text-white">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent mx-auto mb-4"></div>
+                <p className="mb-2">Analyzing...</p>
+                <p className="text-sm">Confidence: {Math.round(confidence)}%</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-center space-x-4">
+        <button
+          onClick={handleImageCapture}
+          disabled={isScanning}
+          className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <Camera size={20} />
+          <span>{isScanning ? 'Analyzing...' : 'Capture Image'}</span>
+        </button>
+        
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center space-x-2 bg-gray-600 text-white px-6 py-3 rounded-xl hover:bg-gray-700 transition-colors"
+        >
+          <Upload size={20} />
+          <span>Upload Image</span>
+        </button>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
+      {results && (
+        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <CheckCircle className="text-green-500 mr-2" size={20} />
+            Analysis Results
+          </h3>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+              <span className="font-medium text-green-800">Overall Health Status</span>
+              <span className="text-green-600 font-semibold">{results.overallHealth}</span>
+            </div>
+
+            <div className="space-y-3">
+              {results.conditions.map((condition, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-gray-700">{condition.name}</span>
+                  <div className="text-right">
+                    <span className={`font-semibold ${condition.color}`}>{condition.risk}</span>
+                    <p className="text-sm text-gray-500">{condition.confidence}% confidence</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-4 border-t">
+              <h4 className="font-medium text-gray-800 mb-2">Recommendations</h4>
+              <ul className="space-y-1">
+                {results.recommendations.map((rec, index) => (
+                  <li key={index} className="text-sm text-gray-600 flex items-start">
+                    <span className="text-blue-500 mr-2">•</span>
+                    {rec}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-blue-600 text-white p-2 rounded-xl">
+                <Eye size={24} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">HealthVision</h1>
+                <p className="text-sm text-gray-600">AI-Powered Health Monitoring</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Shield size={16} />
+              <span>Privacy Protected</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl mb-8">
+          <button
+            onClick={() => setActiveTab('scanner')}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+              activeTab === 'scanner'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Health Scanner
+          </button>
+          <button
+            onClick={() => setActiveTab('features')}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+              activeTab === 'features'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Features
+          </button>
+        </div>
+
+        {/* Content */}
+        {activeTab === 'scanner' ? (
+          <ScannerInterface />
+        ) : (
+          <div className="space-y-8">
+            {/* Hero Section */}
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">
+                Advanced Computer Vision for Health
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Leveraging cutting-edge machine learning and computer vision to provide 
+                real-time health insights through facial analysis
+              </p>
+            </div>
+
+            {/* Core Features */}
+            <div>
+              <h3 className="text-2xl font-semibold text-gray-800 mb-6">Core Technologies</h3>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <FeatureCard
+                  icon={Brain}
+                  title="Core ML Integration"
+                  description="On-device inference with Core ML for high privacy and low latency processing"
+                  highlight={true}
+                />
+                <FeatureCard
+                  icon={Camera}
+                  title="Computer Vision"
+                  description="OpenCV and Vision framework for real-time facial feature analysis"
+                  highlight={true}
+                />
+                <FeatureCard
+                  icon={Smartphone}
+                  title="Swift & SwiftUI"
+                  description="Native iOS implementation with modern SwiftUI interface design"
+                  highlight={true}
+                />
+                <FeatureCard
+                  icon={Zap}
+                  title="Real-Time Processing"
+                  description="Live video feed analysis with AVFoundation and Vision framework"
+                />
+                <FeatureCard
+                  icon={Lock}
+                  title="Privacy First"
+                  description="All processing happens on-device, no data leaves your phone"
+                />
+                <FeatureCard
+                  icon={Activity}
+                  title="Health Monitoring"
+                  description="Multi-condition detection including fever, eye health, and liver indicators"
+                />
+              </div>
+            </div>
+
+            {/* Technical Implementation */}
+            <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100">
+              <h3 className="text-2xl font-semibold text-gray-800 mb-6">Technical Implementation</h3>
+              
+              <div className="space-y-6">
+                <div className="border-l-4 border-blue-500 pl-6">
+                  <h4 className="font-semibold text-gray-800 mb-2">Model Conversion Pipeline</h4>
+                  <p className="text-gray-600">
+                    Python-based OpenCV models converted to Core ML format using coremltools and ONNX, 
+                    enabling seamless integration with iOS applications while maintaining accuracy.
+                  </p>
+                </div>
+
+                <div className="border-l-4 border-green-500 pl-6">
+                  <h4 className="font-semibold text-gray-800 mb-2">iOS Integration</h4>
+                  <p className="text-gray-600">
+                    Swift-based frontend utilizing AVFoundation for camera access, UIImagePickerController 
+                    for image selection, and VisionKit for real-time facial analysis processing.
+                  </p>
+                </div>
+
+                <div className="border-l-4 border-purple-500 pl-6">
+                  <h4 className="font-semibold text-gray-800 mb-2">Privacy & Security</h4>
+                  <p className="text-gray-600">
+                    HIPAA-compliant design with on-device processing, no data transmission, 
+                    and full compliance with Apple's privacy guidelines and accessibility standards.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Disease Detection Capabilities */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-8">
+              <h3 className="text-2xl font-semibold text-gray-800 mb-6">Detection Capabilities</h3>
+              
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="bg-red-100 text-red-600 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <Thermometer size={32} />
+                  </div>
+                  <h4 className="font-semibold text-gray-800 mb-2">Fever Detection</h4>
+                  <p className="text-sm text-gray-600">
+                    Thermal analysis of facial patterns to identify elevated body temperature indicators
+                  </p>
+                </div>
+
+                <div className="text-center">
+                  <div className="bg-blue-100 text-blue-600 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <Eye size={32} />
+                  </div>
+                  <h4 className="font-semibold text-gray-800 mb-2">Eye Health</h4>
+                  <p className="text-sm text-gray-600">
+                    Computer vision analysis of eye appearance for early detection of potential issues
+                  </p>
+                </div>
+
+                <div className="text-center">
+                  <div className="bg-green-100 text-green-600 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <Activity size={32} />
+                  </div>
+                  <h4 className="font-semibold text-gray-800 mb-2">Liver Function</h4>
+                  <p className="text-sm text-gray-600">
+                    Facial color analysis and pattern recognition for liver health indicators
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Disclaimer */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
+                <div>
+                  <h4 className="font-semibold text-yellow-800 mb-1">Medical Disclaimer</h4>
+                  <p className="text-yellow-700 text-sm">
+                    This application is designed for educational and research purposes. 
+                    It should not replace professional medical advice, diagnosis, or treatment. 
+                    Always consult with qualified healthcare providers for medical concerns.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default HealthVisionApp;
